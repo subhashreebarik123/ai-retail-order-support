@@ -1,5 +1,4 @@
-
-fastapi
+﻿fastapi
 uvicorn[standard]
 google-genai
 python-dotenv
@@ -7,3 +6,4 @@ sqlalchemy
 pymysql
 pytest
 httpx
+chromadb

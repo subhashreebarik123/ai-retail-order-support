@@ -1,0 +1,19 @@
+﻿services:
+  app:
+    build: .
+    container_name: ai-retail-app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      MYSQL_HOST: ai-retail-mysql
+      MYSQL_PORT: "3306"
+    networks:
+      - retail-network
+    restart: unless-stopped
+
+networks:
+  retail-network:
+    name: ai-retail-network
+    external: true

@@ -3,3 +3,19 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+
+# ChromaDB generated vector database
+chroma_db/
+
+# Python and test artifacts
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Local environment and editor files
+.env.*
+!.env.example
+.vscode/
+.idea/
