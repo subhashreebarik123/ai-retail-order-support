@@ -1,392 +1,283 @@
-\# AI-Powered Retail Order Support Assistant
+# AI-Powered Retail Order Support Assistant
 
+A Generative AI-powered backend application that helps retail customers retrieve order information and get answers to common customer-support questions. It combines **FastAPI, MySQL, Google Gemini, Retrieval-Augmented Generation (RAG), and ChromaDB** to provide order-specific responses and retail policy guidance.
 
+## Features
 
-A backend application that helps retail customers get order information and answers to common customer support questions using a database and Generative AI.
+- Retrieve order details using an order ID.
+- Answer order-related questions using database records.
+- Generate responses to general retail-support questions using Google Gemini.
+- Retrieve relevant retail policy information using Retrieval-Augmented Generation (RAG).
+- Store and search retail policy chunks using ChromaDB.
+- Validate requests and handle missing or unknown orders.
+- Expose REST APIs through FastAPI.
+- Store order information in MySQL using SQLAlchemy.
+- Run the application using Docker and Docker Compose.
+- Automatically test API behavior using pytest and mocked Gemini responses.
+- Access interactive API documentation through Swagger UI.
 
+## Technology Stack
 
+| Category | Technology |
+|---|---|
+| Programming Language | Python 3.13 |
+| Backend Framework | FastAPI |
+| Generative AI | Google Gemini API |
+| RAG | Retrieval-Augmented Generation |
+| Vector Database | ChromaDB |
+| Relational Database | MySQL 8.4 |
+| ORM | SQLAlchemy |
+| Containerization | Docker |
+| Container Orchestration | Docker Compose |
+| Testing | pytest, FastAPI TestClient, unittest.mock |
+| API Documentation | Swagger UI |
 
-\## Features
-
-
-
-\- Retrieve order details using an order ID.
-
-\- Answer order-related questions using live database records.
-
-\- Generate AI responses to general retail support questions using Google Gemini.
-
-\- Validate requests and handle missing or unknown orders.
-
-\- Expose REST APIs through FastAPI.
-
-\- Store order information in MySQL.
-
-\- Run MySQL in Docker.
-
-\- Automatically test API behavior using pytest and mocked AI responses.
-
-\- Interactive API documentation using Swagger UI.
-
-
-
-\## Technology Stack
-
-
-
-\- \*\*Language:\*\* Python 3.13
-
-\- \*\*Backend Framework:\*\* FastAPI
-
-\- \*\*Generative AI:\*\* Google Gemini API
-
-\- \*\*Database:\*\* MySQL 8.4
-
-\- \*\*ORM:\*\* SQLAlchemy
-
-\- \*\*Containerization:\*\* Docker
-
-\- \*\*Testing:\*\* pytest, FastAPI TestClient, unittest.mock
-
-\- \*\*API Documentation:\*\* Swagger UI
-
-
-
-\## Architecture
-
-
+## Architecture
 
 ```text
-
-Customer
-
-&#x20;  |
-
-&#x20;  v
-
-FastAPI REST API
-
-&#x20;  |
-
-&#x20;  v
-
-Chat and Order Lookup Logic
-
-&#x20;  |
-
-&#x20;  +--------------------+
-
-&#x20;  |                    |
-
-&#x20;  v                    v
-
-MySQL Database      Google Gemini
-
-&#x20;  |                    |
-
-&#x20;  v                    v
-
-Order Details       AI-generated Answers
-
-&#x20;  |                    |
-
-&#x20;  +----------+---------+
-
-&#x20;             |
-
-&#x20;             v
-
-&#x20;      Customer Response
-
+                         Customer
+                            |
+                            v
+                     FastAPI REST API
+                            |
+                            v
+                 Chat and Order Lookup Logic
+                            |
+             +--------------+--------------+
+             |              |              |
+             v              v              v
+        MySQL Database   ChromaDB      Google Gemini
+             |          Policy Search       ^
+             v              |               |
+        Order Details       v               |
+             |        Relevant Policy       |
+             |           Context ------------+
+             |                              |
+             +--------------+---------------+
+                            |
+                            v
+                    Customer Response
 ```
 
+### Request Flow
 
+**Order-specific questions**
 
-Order-specific questions containing an order ID are answered using database records. General retail questions are sent to Gemini with customer-support instructions.
+1. The customer submits a question containing an order ID.
+2. The application identifies the order ID and queries MySQL.
+3. The application formats the order details into a response.
+4. The API returns the order information to the customer.
 
+**General retail-support questions**
 
+1. The customer submits a retail policy question.
+2. ChromaDB retrieves relevant policy content from the local knowledge base.
+3. The retrieved content is included as context for Google Gemini.
+4. Gemini generates a response based on the supplied policy context.
+5. The API returns the answer to the customer.
 
-\## API Endpoints
+The policy documents in this portfolio project are sample content, not verified policies from a real retailer.
 
-
+## API Endpoints
 
 | Method | Endpoint | Purpose |
-
-|--------|----------|---------|
-
+|---|---|---|
 | GET | `/` | Welcome message |
-
 | GET | `/health` | Health check |
+| GET | `/orders/{order_id}` | Retrieve order details |
+| POST | `/chat` | Answer order-related or general support questions |
 
-| GET | `/orders/{order\_id}` | Retrieve order details |
+## Sample API Requests
 
-| POST | `/chat` | Answer customer questions |
+### 1. Retrieve Order Details
 
-
-
-\## Sample API Requests
-
-
-
-\### Get order details
-
-
+**Request**
 
 ```http
-
 GET /orders/ORD1001
-
 ```
 
-
-
-Example response:
-
-
+**Example response**
 
 ```json
-
 {
-
-&#x20; "order\_id": "ORD1001",
-
-&#x20; "customer\_name": "Customer A",
-
-&#x20; "status": "Shipped",
-
-&#x20; "estimated\_delivery": "2026-10-29"
-
+  "order_id": "ORD1001",
+  "customer_name": "Customer A",
+  "status": "Shipped",
+  "estimated_delivery": "2026-10-29"
 }
-
 ```
 
+### 2. Ask an Order-Related Question
 
-
-\### Ask a customer support question
-
-
+**Request**
 
 ```http
-
 POST /chat
-
 Content-Type: application/json
-
 ```
 
-
-
-Request:
-
-
+**Request body**
 
 ```json
-
 {
-
-&#x20; "question": "What is the status of my order ORD1002?"
-
+  "question": "What is the status of my order ORD1002?"
 }
-
 ```
 
-
-
-Example response:
-
-
+**Example response**
 
 ```json
-
 {
-
-&#x20; "answer": "Order ID: ORD1002. Status: Processing. Estimated delivery: 2026-10-31."
-
+  "answer": "Order ID: ORD1002. Status: Processing. Estimated delivery: 2026-10-31."
 }
-
 ```
 
+### 3. Ask a Retail Policy Question
 
+**Request body**
 
-\## Local Setup
+```json
+{
+  "question": "When can a customer cancel an order?"
+}
+```
 
+**Example response**
 
+```json
+{
+  "answer": "To request an order cancellation, contact customer support as soon as possible. Cancellation may not be possible once an order has been shipped."
+}
+```
 
-\### Prerequisites
+The response wording may vary because it is generated by the AI model.
 
+## Local Setup
 
+### Prerequisites
 
-\- Python 3.13
+- Python 3.13
+- Docker Desktop
+- Git
+- A Google Gemini API key
+- MySQL configured with the required database and order table
 
-\- Docker Desktop
+### 1. Clone the Repository
 
-\- A Google Gemini API key
-
-
-
-\### 1. Clone the repository
-
-
-
-```bash
-
-git clone <YOUR\_GITHUB\_REPOSITORY\_URL>
-
+```powershell
+git clone https://github.com/subhashreebarik123/ai-retail-order-support.git
 cd ai-retail-order-support
-
 ```
 
-
-
-\### 2. Create a virtual environment
-
-
+### 2. Create a Virtual Environment
 
 ```powershell
-
 python -m venv .venv
-
 ```
 
-
-
-\### 3. Install dependencies
-
-
+### 3. Install Dependencies
 
 ```powershell
-
-.\\.venv\\Scripts\\python.exe -m pip install -r requirements.txt
-
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
+### 4. Configure Environment Variables
 
-
-\### 4. Configure environment variables
-
-
-
-Create a `.env` file in the project root:
-
-
+Create a `.env` file in the project root directory:
 
 ```env
-
-GEMINI\_API\_KEY=your\_gemini\_api\_key
-
-MYSQL\_HOST=127.0.0.1
-
-MYSQL\_PORT=3306
-
-MYSQL\_USER=root
-
-MYSQL\_PASSWORD=your\_local\_mysql\_password
-
-MYSQL\_DATABASE=retail\_support
-
+GEMINI_API_KEY=your_gemini_api_key
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_USER=your_mysql_user
+MYSQL_PASSWORD=your_local_mysql_password
+MYSQL_DATABASE=retail_support
 ```
 
+Replace the placeholder values with your own credentials. Never commit `.env` or real credentials to GitHub.
 
+### 5. Start MySQL
 
-Use your own local MySQL credentials. Never commit `.env` or API keys to GitHub.
-
-
-
-\### 5. Start the MySQL container
-
-
-
-Start the existing configured container if it already exists:
-
-
+If you already have the configured MySQL container, start it:
 
 ```powershell
-
 docker start ai-retail-mysql
-
 ```
 
+For a fresh environment, configure MySQL, create the `retail_support` database and the required `orders` table, and ensure the schema matches the application's SQLAlchemy model.
 
+If running the API locally, set `MYSQL_HOST` to the hostname or IP address accessible from your local Python process.
 
-If setting up a new environment, configure MySQL and create the `retail\_support` database and `orders` table before starting the application.
+### 6. Initialize the Policy Knowledge Base
 
-
-
-\### 6. Start the API
-
-
+The application initializes the ChromaDB policy collection during FastAPI startup. You can also build it manually:
 
 ```powershell
-
-.\\.venv\\Scripts\\python.exe -m uvicorn main:app --reload --port 8000
-
+.\.venv\Scripts\python.exe .\rag.py
 ```
 
+This reads the policy content from `knowledge_base/retail_policies.txt` and stores the generated chunks in the local `chroma_db/` directory.
 
+### 7. Start the API Locally
 
-\### 7. Open Swagger UI
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn main:app --reload --port 8000
+```
 
-
+### 8. Open Swagger UI
 
 Visit:
 
+[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
+Use the interactive documentation to explore and test the API endpoints.
 
-http://127.0.0.1:8000/docs
+## Run with Docker Compose
 
+The repository includes a `Dockerfile` and `docker-compose.yml`.
 
+The current Compose configuration expects the external Docker network `ai-retail-network` and a reachable MySQL container named `ai-retail-mysql`.
 
-\## Run Automated Tests
-
-
+Ensure the MySQL container and network exist and that the `.env` file contains valid configuration before starting the application.
 
 ```powershell
-
-.\\.venv\\Scripts\\python.exe -m pytest -v
-
+docker compose build app
+docker compose up -d app
 ```
 
+Check the application logs:
 
+```powershell
+docker compose logs --tail 50 app
+```
 
-The current test suite contains eight passing tests covering health checks, order retrieval, chat behavior, input validation, and mocked Gemini responses.
+Verify the health endpoint:
 
+```powershell
+Invoke-RestMethod http://localhost:8000/health
+```
 
+Expected response:
 
-\## Security Notes
+```json
+{
+  "status": "healthy",
+  "service": "ai-retail-order-support"
+}
+```
 
+## Run Automated Tests
 
+Execute the test suite from the project root:
 
-\- Store API keys and passwords in environment variables.
+```powershell
+.\.venv\Scripts\python.exe -m pytest -v
+```
 
-\- Never commit secrets or production credentials.
+The current test suite contains **eight passing tests**, covering:
 
-\- Use appropriate database permissions and authentication in production.
-
-\- Add authentication, authorization, rate limiting, and monitoring before production deployment.
-
-
-
-\## Future Enhancements
-
-
-
-\- Add a web-based customer chat interface.
-
-\- Implement order status and delivery notifications.
-
-\- Add retrieval-augmented generation (RAG) for verified retail policies.
-
-\- Containerize the FastAPI application.
-
-\- Add CI/CD with automated testing and deployment.
-
-\- Add monitoring, logging, and production security controls.
-
-
-
-\## Disclaimer
-
-
-
-This is a learning and portfolio project using sample retail order data. It is not connected to a real retailer or live shipping provider.
-
+- Health endpoint behavior.
+- Existing and unknown order retrieval.
+- Chat responses for existing and unknown orders.
+- General
