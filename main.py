@@ -1,8 +1,9 @@
+
 import os
 import re
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Path
 from google import genai
 from pydantic import BaseModel
@@ -13,6 +14,7 @@ from models import Order
 from rag import ensure_knowledge_base, search_policies
 
 load_dotenv()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -27,18 +29,14 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
-# Gemini configuration
+
+# Gemini configuration.
+# The app can load without an API key, which allows CI tests to import it.
 api_key = os.getenv("GEMINI_API_KEY")
-
-if not api_key:
-    raise RuntimeError(
-        "GEMINI_API_KEY not found. Check your .env file."
-    )
-
-client = genai.Client(api_key=api_key)
+client = genai.Client(api_key=api_key) if api_key else None
 
 
-# API response models
+# API response models.
 class OrderResponse(BaseModel):
     order_id: str
     customer_name: str
@@ -164,7 +162,7 @@ def chat_with_gemini(request: ChatRequest):
             )
         )
 
-    # Retrieve relevant retail policy information from ChromaDB.
+    # Retrieve relevant retail policies from ChromaDB.
     try:
         policy_chunks = search_policies(question, n_results=2)
     except Exception as exc:
@@ -197,6 +195,13 @@ def chat_with_gemini(request: ChatRequest):
             "or refund status. Ask the customer to contact customer support "
             "for retailer-specific policy information.\n\n"
             f"Customer question: {question}"
+        )
+
+    # Only policy questions require Gemini.
+    if client is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Gemini API key is not configured.",
         )
 
     try:
