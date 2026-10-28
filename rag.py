@@ -16,6 +16,7 @@ CHUNK_OVERLAP = 100
 def split_text(text: str) -> list[str]:
     """Split text into overlapping character-based chunks."""
     text = text.strip()
+
     if not text:
         return []
 
@@ -37,10 +38,12 @@ def split_text(text: str) -> list[str]:
     return chunks
 
 
-def build_knowledge_base():
-    """Read the policy file and store its chunks in ChromaDB."""
+def build_knowledge_base() -> int:
+    """Create or rebuild the policy collection in ChromaDB."""
     if not POLICY_FILE.exists():
-        raise FileNotFoundError(f"Policy file not found: {POLICY_FILE}")
+        raise FileNotFoundError(
+            f"Policy file not found: {POLICY_FILE}"
+        )
 
     policy_text = POLICY_FILE.read_text(encoding="utf-8")
     chunks = split_text(policy_text)
@@ -54,11 +57,13 @@ def build_knowledge_base():
         name=COLLECTION_NAME
     )
 
-    # Rebuild this collection so repeated runs do not duplicate chunks.
+    # Remove existing policy chunks to avoid duplicate IDs.
     existing = collection.get()
+
     if existing["ids"]:
         collection.delete(ids=existing["ids"])
 
+    # ChromaDB generates embeddings for these documents.
     collection.add(
         ids=[f"policy-{i}" for i in range(len(chunks))],
         documents=chunks,
@@ -69,35 +74,60 @@ def build_knowledge_base():
     )
 
     return len(chunks)
-def ensure_knowledge_base():
-    """Create the policy collection only if it does not exist."""
+
+
+def ensure_knowledge_base() -> None:
+    """Create the knowledge base if missing or empty."""
     client = chromadb.PersistentClient(path=str(CHROMA_DIR))
 
     existing_collections = [
-        collection.name for collection in client.list_collections()
+        collection.name
+        for collection in client.list_collections()
     ]
 
     if COLLECTION_NAME not in existing_collections:
         count = build_knowledge_base()
         print(f"Knowledge base initialized with {count} chunks.")
+        return
+
+    collection = client.get_collection(name=COLLECTION_NAME)
+
+    if collection.count() == 0:
+        print("Policy collection is empty. Rebuilding...")
+        count = build_knowledge_base()
+        print(f"Knowledge base rebuilt with {count} chunks.")
     else:
-        collection = client.get_collection(name=COLLECTION_NAME)
         print(
             f"Knowledge base already exists with "
             f"{collection.count()} chunks."
         )
 
-def search_policies(question: str, n_results: int = 2) -> list[str]:
-    """Retrieve the most relevant policy chunks for a question."""
+
+def search_policies(
+    question: str,
+    n_results: int = 2,
+) -> list[str]:
+    """Retrieve relevant policy chunks from ChromaDB."""
     client = chromadb.PersistentClient(path=str(CHROMA_DIR))
     collection = client.get_collection(name=COLLECTION_NAME)
 
+    count = collection.count()
+
+    if count == 0:
+        raise RuntimeError(
+            "The policy knowledge base is empty. "
+            "Initialize it before searching."
+        )
+
     result = collection.query(
         query_texts=[question],
-        n_results=min(n_results, collection.count()),
+        n_results=min(n_results, count),
     )
 
-    return result["documents"][0] if result["documents"] else []
+    if not result["documents"]:
+        return []
+
+    return result["documents"][0] or []
 
 
 if __name__ == "__main__":

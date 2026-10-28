@@ -12,6 +12,8 @@ COPY database.py .
 COPY models.py .
 COPY main.py .
 COPY rag.py .
+COPY langchain_service.py .
+COPY workflow.py .
 COPY knowledge_base/ ./knowledge_base/
 
 EXPOSE 8000
